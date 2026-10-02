@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Space Shuttle Vocab Shooter - Higher Diploma Sports</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background-color: #050814;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 850px;
+      height: 95vh;
+      max-height: 680px;
+      background: radial-gradient(ellipse at bottom, #101935 0%, #030712 100%);
+      border: 2px solid #00e5ff;
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.35);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #hud {
+      background: rgba(8, 14, 30, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 2px solid rgba(0, 229, 255, 0.3);
+      padding: 10px 16px;
+      z-index: 10;
+    }
+    .hud-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid #00e5ff;
+      color: #7df9ff;
+    }
+    .score-badge {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid #ffd700;
+      color: #ffd700;
+    }
+    .lives-badge {
+      background: rgba(255, 75, 75, 0.15);
+      border: 1px solid #ff4b4b;
+      color: #ff6b6b;
+    }
+    #question-card {
+      background: rgba(2, 6, 23, 0.9);
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 1.05rem;
+      line-height: 1.45;
+      text-align: center;
+      color: #f1f5f9;
+      box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2);
+    }
+    #question-card span.blank-slot {
+      color: #38bdf8;
+      font-weight: 800;
+      text-decoration: underline;
+      letter-spacing: 2px;
+    }
+    #game-canvas {
+      flex: 1;
+      width: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+    /* Mobile / Touch Overlay Controls */
+    #touch-controls {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 0;
+      right: 0;
+      padding: 0 20px;
+      justify-content: space-between;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .touch-btn-group {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    .ctrl-btn {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: rgba(14, 28, 54, 0.75);
+      border: 2px solid #00e5ff;
+      color: #00e5ff;
+      font-size: 1.4rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+    }
+    .ctrl-btn:active {
+      background: rgba(0, 229, 255, 0.4);
+      transform: scale(0.92);
+    }
+    .fire-btn {
+      background: rgba(239, 68, 68, 0.4);
+      border-color: #f87171;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(248, 113, 113, 0.6);
+    }
+    .fire-btn:active {
+      background: rgba(239, 68, 68, 0.8);
+    }
+
+    /* Modal Screens */
+    .screen-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.94);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 25px;
+      text-align: center;
+      z-index: 30;
+    }
+    .screen-overlay h1 {
+      font-size: 2.2rem;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+    }
+    .screen-overlay p {
+      max-width: 540px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 18px;
+      font-size: 1rem;
+    }
+    .instructions-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 22px;
+      text-align: left;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .btn-action {
+      padding: 12px 32px;
+      font-size: 1.15rem;
+      font-weight: bold;
+      letter-spacing: 0.8px;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #00e5ff, #0284c7);
+      color: #030712;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+      transition: all 0.2s ease;
+    }
+    .btn-action:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 28px rgba(0, 229, 255, 0.8);
+    }
+    #feedback-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      opacity: 0;
+      padding: 12px 28px;
+      border-radius: 12px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      z-index: 25;
+    }
+    #feedback-banner.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+    .feedback-correct {
+      background: rgba(16, 185, 129, 0.9);
+      border: 2px solid #34d399;
+      color: #ffffff;
+      box-shadow: 0 0 25px rgba(52, 211, 153, 0.7);
+    }
+    .feedback-wrong {
+      background: rgba(239, 68, 68, 0.9);
+      border: 2px solid #f87171;
+      color: #ffffff;
+      box-shadow: 0 0 25px rgba(248, 113, 113, 0.7);
+    }
+    #audio-toggle {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      border-radius: 16px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      #touch-controls {
+        display: flex;
+      }
+      #game-wrapper {
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+        border: none;
+      }
+      #question-card {
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <!-- Top HUD -->
+  <div id="hud">
+    <div class="hud-stats">
+      <div class="badge" id="hud-progress">Question: 1 / 14</div>
+      <div class="score-badge badge" id="hud-score">Score: 0</div>
+      <div class="lives-badge badge" id="hud-lives">Shields: 100%</div>
+      <button id="audio-toggle">Sound: ON</button>
+    </div>
+    <div id="question-card">
+      <span id="question-text">Loading question...</span>
+    </div>
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Floating Alert Banner -->
+  <div id="feedback-banner"></div>
+
+  <!-- Mobile Touch Controls -->
+  <div id="touch-controls">
+    <div class="touch-btn-group">
+      <button class="ctrl-btn" id="btn-left">&#9664;</button>
+      <button class="ctrl-btn" id="btn-right">&#9654;</button>
+    </div>
+    <div class="touch-btn-group">
+      <button class="ctrl-btn fire-btn" id="btn-fire">&#9733; FIRE</button>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="screen-overlay" id="start-screen">
+    <h1>🚀 SPACE SHUTTLE VOCABULARY</h1>
+    <p>Higher Diploma Sports & Exercise Science Vocabulary Challenge</p>
+    <div class="instructions-box">
+      <strong>🎯 How to Play:</strong><br/>
+      • Read the sentence with the missing vocabulary term at the top.<br/>
+      • Aim your space shuttle and blast the enemy craft carrying the <strong>correct word</strong>!<br/>
+      • <strong>Controls:</strong> Left / Right Arrow keys (or <b>A / D</b>) to steer, <b>Spacebar</b> to fire.<br/>
+      • <strong>Mobile / Tablet:</strong> Use on-screen buttons or tap to move and shoot.<br/>
+      • Correct hits give +100 points. Incorrect hits damage your shuttle shields!
+    </div>
+    <button class="btn-action" id="start-btn">LAUNCH MISSION</button>
+  </div>
+
+  <!-- Game Over / Victory Screen -->
+  <div class="screen-overlay" id="end-screen" style="display: none;">
+    <h1 id="end-title">MISSION ACCOMPLISHED!</h1>
+    <p id="end-summary">Reviewing tactical exam performance...</p>
+    <div class="instructions-box" id="end-details" style="max-height: 200px; overflow-y: auto;">
+      <!-- Populated via JS -->
+    </div>
+    <button class="btn-action" id="restart-btn">REPLAY MISSION</button>
+  </div>
+</div>
+
+<script>
+// --- QUESTION DATABASE (Higher Diploma Level) ---
+const QUESTIONS = [
+  {
+    sentence: "Messi tries to _____ the ball to the penalty area – and he scores!",
+    options: ["rebound", "dribble", "sprain", "stretches", "grab"],
+    answer: "dribble"
+  },
+  {
+    sentence: "_____ is not only a complete martial art from the country of China, it is also a full contact sport.",
+    options: ["diving", "archery", "wrestling", "wushu", "shooting"],
+    answer: "wushu"
+  },
+  {
+    sentence: "You will definitely have _____ feet tomorrow – you jogged too hard today!",
+    options: ["tears", "intensity", "sore", "flips", "ankle"],
+    answer: "sore"
+  },
+  {
+    sentence: "Liverpool FC is one of the _____ teams in modern football with six UEFA Champions League titles and an EPL title.",
+    options: ["top-ranked", "award", "gold", "honor", "contest"],
+    answer: "top-ranked"
+  },
+  {
+    sentence: "Not only requiring physical strength and good stamina, _____ also requires skills like map reading and decision making.",
+    options: ["skiing", "curling", "bob sleigh", "equestrian", "orienteering"],
+    answer: "orienteering"
+  },
+  {
+    sentence: "One of the goals of the Paralympic Games is to encourage people with _____ to participate more actively in sports.",
+    options: ["fundamentals", "agility", "disabilities", "ability", "sportsmanship"],
+    answer: "disabilities"
+  },
+  {
+    sentence: "Too much repetitive training may cause repetitive stress, and eventually leading to _____.",
+    options: ["pelvis", "overuse injury", "dislocate", "cartilage", "breaks"],
+    answer: "overuse injury"
+  },
+  {
+    sentence: "Arsenal’s Shkodran Mustafi is going to miss the new EPL season starting 12 September as he is still in his early stage of _____ after a serious injury.",
+    options: ["monitoring", "floor routine", "benchmarking", "recover", "rehabilitation"],
+    answer: "rehabilitation"
+  },
+  {
+    sentence: "Australia, Japan, Qatar and the USA competed fiercely for being the _____ of the 2022 World Cup, and Qatar eventually won the bid.",
+    options: ["host country", "participants", "signature events", "subcommittees", "development initiatives"],
+    answer: "host country"
+  },
+  {
+    sentence: "An inappropriate twisting or pivoting action performed by athletes may lead to _____ injuries.",
+    options: ["tendon", "pelvis", "elbows", "cartilage", "sharp pain"],
+    answer: "cartilage"
+  },
+  {
+    sentence: "A comprehensive _____ is needed for the HKSAR Government to better develop sports and support the development of athletes.",
+    options: ["biopsychosocial model", "sustainability", "sponsorship", "strategic plan", "sport nutrition"],
+    answer: "strategic plan"
+  },
+  {
+    sentence: "A _____ study is definitely needed before making a decision of establishing a new sport facility in the city.",
+    options: ["sport medicine", "cross-training", "lifesaving", "selection criteria", "feasibility"],
+    answer: "feasibility"
+  },
+  {
+    sentence: "_____ is a much needed ability for basketball players, especially if they are in a team that plays a run-and-gun game.",
+    options: ["workouts", "agility", "spirit", "glory", "diving"],
+    answer: "agility"
+  },
+  {
+    sentence: "A wild _____ in baseball means the ball thrown cannot be caught or controlled by the catcher using ordinary effort.",
+    options: ["pitch", "javelin", "dribble", "hockey", "award"],
+    answer: "pitch"
+  }
+];
+
+// --- SOUND SYNTHESIS (Web Audio API) ---
+class SoundManager {
+  constructor() {
+    this.enabled = true;
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+  playLaser() {
+    if (!this.enabled || !this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(850, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+  playHitCorrect() {
+    if (!this.enabled || !this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(440, this.ctx.currentTime + 0.08);
+    osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.35);
+  }
+  playHitWrong() {
+    if (!this.enabled || !this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(95, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.25);
+  }
+}
+
+// --- GAME ENGINE ---
+const sound = new SoundManager();
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+const questionText = document.getElementById('question-text');
+const hudProgress = document.getElementById('hud-progress');
+const hudScore = document.getElementById('hud-score');
+const hudLives = document.getElementById('hud-lives');
+const feedbackBanner = document.getElementById('feedback-banner');
+const audioToggle = document.getElementById('audio-toggle');
+
+const startScreen = document.getElementById('start-screen');
+const endScreen = document.getElementById('end-screen');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const endTitle = document.getElementById('end-title');
+const endSummary = document.getElementById('end-summary');
+const endDetails = document.getElementById('end-details');
+
+let currentQuestionIndex = 0;
+let score = 0;
+let shields = 100;
+let gameActive = false;
+let userAnswersLog = [];
+
+// Game Entities
+let player = {
+  x: 0,
+  y: 0,
+  w: 48,
+  h: 52,
+  speed: 7,
+  vx: 0
+};
+
+let bullets = [];
+let targets = [];
+let particles = [];
+let stars = [];
+let keys = {};
+
+// Resize canvas dynamically
+function resizeCanvas() {
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight - document.getElementById('hud').clientHeight;
+  if (!gameActive) {
+    player.x = canvas.width / 2 - player.w / 2;
+    player.y = canvas.height - player.h - 15;
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+
+// Background Starfield
+function initStars() {
+  stars = [];
+  const count = 75;
+  for (let i = 0; i < count; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 2 + 0.5,
+      speed: Math.random() * 1.5 + 0.5
+    });
+  }
+}
+
+function updateStars() {
+  for (let s of stars) {
+    s.y += s.speed;
+    if (s.y > canvas.height) {
+      s.y = 0;
+      s.x = Math.random() * canvas.width;
+    }
+  }
+}
+
+function drawStars() {
+  ctx.fillStyle = '#ffffff';
+  for (let s of stars) {
+    ctx.globalAlpha = Math.min(s.speed / 2, 0.9);
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+// Particle System
+function createExplosion(x, y, color, count = 20) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 1;
+    particles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 30,
+      maxLife: 30,
+      color: color,
+      size: Math.random() * 3 + 2
+    });
+  }
+}
+
+function updateAndDrawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Draw Player Shuttle
+function drawPlayer() {
+  const cx = player.x + player.w / 2;
+  const top = player.y;
+  const bottom = player.y + player.h;
+
+  ctx.save();
+  // Engine glow
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, bottom - 4);
+  ctx.lineTo(cx + 8, bottom - 4);
+  ctx.lineTo(cx, bottom + 10 + Math.random() * 6);
+  ctx.closePath();
+  ctx.fillStyle = '#38bdf8';
+  ctx.shadowColor = '#00e5ff';
+  ctx.shadowBlur = 15;
+  ctx.fill();
+
+  // Shuttle Body
+  ctx.beginPath();
+  ctx.moveTo(cx, top);
+  ctx.lineTo(player.x + player.w, bottom - 8);
+  ctx.lineTo(cx + 8, bottom - 4);
+  ctx.lineTo(cx, bottom);
+  ctx.lineTo(cx - 8, bottom - 4);
+  ctx.lineTo(player.x, bottom - 8);
+  ctx.closePath();
+
+  ctx.fillStyle = '#0ea5e9';
+  ctx.strokeStyle = '#e0f2fe';
+  ctx.lineWidth = 2;
+  ctx.fill();
+  ctx.stroke();
+
+  // Cockpit
+  ctx.beginPath();
+  ctx.ellipse(cx, top + 18, 5, 10, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#38bdf8';
+  ctx.fill();
+  ctx.restore();
+}
+
+// Question & Target Ships Setup
+function spawnTargetsForCurrentQuestion() {
+  targets = [];
+  const q = QUESTIONS[currentQuestionIndex];
+  
+  // Format question card text
+  questionText.innerHTML = q.sentence.replace('_____', '<span class="blank-slot">[ ? ]</span>');
+  hudProgress.textContent = `Question: ${currentQuestionIndex + 1} / ${QUESTIONS.length}`;
+
+  const shuffled = [...q.options].sort(() => Math.random() - 0.5);
+  const n = shuffled.length;
+  const colWidth = canvas.width / n;
+
+  shuffled.forEach((word, idx) => {
+    // Dynamic sizing based on word length
+    ctx.font = 'bold 13px sans-serif';
+    const textWidth = ctx.measureText(word).width;
+    const targetW = Math.max(textWidth + 28, 90);
+    const targetH = 46;
+
+    const slotX = colWidth * idx + (colWidth / 2) - (targetW / 2);
+    // Stagger slightly vertically
+    const startY = 30 + (idx % 2 === 0 ? 10 : 35);
+
+    targets.push({
+      text: word,
+      isCorrect: word.toLowerCase() === q.answer.toLowerCase(),
+      x: slotX,
+      y: startY,
+      w: targetW,
+      h: targetH,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: 0.18 + Math.random() * 0.12,
+      baseY: startY,
+      hoverOffset: Math.random() * 10
+    });
+  });
+}
+
+function updateTargets() {
+  for (let t of targets) {
+    t.y += t.vy;
+    t.x += t.vx;
+
+    // Bounce off sidewalls
+    if (t.x <= 5 || t.x + t.w >= canvas.width - 5) {
+      t.vx *= -1;
+    }
+
+    // If ships reach player danger zone
+    if (t.y + t.h >= player.y - 20) {
+      t.y = 30; // reset back to top
+    }
+  }
+}
+
+function drawTargets() {
+  for (let t of targets) {
+    ctx.save();
+    // Capsule Ship
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+    
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.8;
+
+    // Rounded ship pill
+    ctx.beginPath();
+    ctx.roundRect(t.x, t.y, t.w, t.h, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // Minor decorative sci-fi thrusters on target
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(t.x + t.w / 2 - 4, t.y - 3, 8, 3);
+
+    // Target Text
+    ctx.font = 'bold 13px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(t.text, t.x + t.w / 2, t.y + t.h / 2);
+
+    ctx.restore();
+  }
+}
+
+// Shooting Mechanics
+function fireLaser() {
+  if (!gameActive) return;
+  // Limit max bullets on screen to avoid spamming
+  if (bullets.length >= 4) return;
+
+  const bx = player.x + player.w / 2 - 2;
+  const by = player.y - 4;
+  bullets.push({ x: bx, y: by, w: 4, h: 14, speed: 10 });
+  sound.playLaser();
+}
+
+function updateAndDrawBullets() {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    let b = bullets[i];
+    b.y -= b.speed;
+
+    // Draw Laser
+    ctx.save();
+    ctx.fillStyle = '#fef08a';
+    ctx.shadowColor = '#eab308';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.restore();
+
+    // Check collision with targets
+    let hitSomething = false;
+    for (let tIndex = 0; tIndex < targets.length; tIndex++) {
+      let t = targets[tIndex];
+      if (
+        b.x < t.x + t.w &&
+        b.x + b.w > t.x &&
+        b.y < t.y + t.h &&
+        b.y + b.h > t.y
+      ) {
+        hitSomething = true;
+        handleTargetHit(t, tIndex);
+        break;
+      }
+    }
+
+    if (hitSomething || b.y < 0) {
+      bullets.splice(i, 1);
+    }
+  }
+}
+
+// Banner alerts
+function showBanner(text, type) {
+  feedbackBanner.textContent = text;
+  feedbackBanner.className = `show ${type === 'correct' ? 'feedback-correct' : 'feedback-wrong'}`;
+  setTimeout(() => {
+    feedbackBanner.className = '';
+  }, 900);
+}
+
+// Target Hit Logic
+function handleTargetHit(target, targetIndex) {
+  const currentQ = QUESTIONS[currentQuestionIndex];
+  if (target.isCorrect) {
+    // CORRECT!
+    sound.playHitCorrect();
+    createExplosion(target.x + target.w / 2, target.y + target.h / 2, '#34d399', 30);
+    score += 100;
+    hudScore.textContent = `Score: ${score}`;
+    showBanner(`EXCELLENT! +100 [ ${target.text} ]`, 'correct');
+
+    userAnswersLog.push({
+      question: currentQ.sentence,
+      chosen: target.text,
+      correct: currentQ.answer,
+      isCorrect: true
+    });
+
+    // Advance after brief pause
+    targets = [];
+    currentQuestionIndex++;
+    if (currentQuestionIndex < QUESTIONS.length) {
+      setTimeout(() => {
+        spawnTargetsForCurrentQuestion();
+      }, 700);
+    } else {
+      setTimeout(endGameVictory, 900);
+    }
+  } else {
+    // WRONG!
+    sound.playHitWrong();
+    createExplosion(target.x + target.w / 2, target.y + target.h / 2, '#f87171', 15);
+    score = Math.max(0, score - 20);
+    shields = Math.max(0, shields - 15);
+    hudScore.textContent = `Score: ${score}`;
+    hudLives.textContent = `Shields: ${shields}%`;
+    showBanner(`INCORRECT: ${target.text}`, 'wrong');
+
+    // Remove just that incorrect target so student can try remaining options
+    targets.splice(targetIndex, 1);
+
+    if (shields <= 0) {
+      setTimeout(endGameOver, 600);
+    }
+  }
+}
+
+// End Screens
+function endGameVictory() {
+  gameActive = false;
+  endTitle.textContent = "🏆 MISSION SUCCESSFUL!";
+  endTitle.style.color = "#34d399";
+  endSummary.innerHTML = `Congratulations! You scored <strong>${score}</strong> points with <strong>${shields}%</strong> shields remaining.`;
+  populateReview();
+  endScreen.style.display = 'flex';
+}
+
+function endGameOver() {
+  gameActive = false;
+  endTitle.textContent = "⚠️ SHIELDS DEPLETED";
+  endTitle.style.color = "#f87171";
+  endSummary.innerHTML = `Your shuttle sustained too much damage. Final Score: <strong>${score}</strong> points.`;
+  populateReview();
+  endScreen.style.display = 'flex';
+}
+
+function populateReview() {
+  let html = `<div style="font-weight: bold; margin-bottom: 8px; color: #38bdf8;">Vocabulary Master List:</div><ol style="padding-left: 20px;">`;
+  QUESTIONS.forEach((q, i) => {
+    html += `<li style="margin-bottom: 6px;"><strong>${q.answer}</strong> — <em>${q.sentence.replace('_____', '<strong>' + q.answer.toUpperCase() + '</strong>')}</em></li>`;
+  });
+  html += `</ol>`;
+  endDetails.innerHTML = html;
+}
+
+// Game Loop
+function gameLoop() {
+  if (!gameActive) return;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  updateStars();
+  drawStars();
+
+  // Player controls
+  if (keys['ArrowLeft'] || keys['KeyA']) {
+    player.x = Math.max(10, player.x - player.speed);
+  }
+  if (keys['ArrowRight'] || keys['KeyD']) {
+    player.x = Math.min(canvas.width - player.w - 10, player.x + player.speed);
+  }
+
+  drawPlayer();
+  updateTargets();
+  drawTargets();
+  updateAndDrawBullets();
+  updateAndDrawParticles();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Start / Reset
+function startGame() {
+  sound.init();
+  startScreen.style.display = 'none';
+  endScreen.style.display = 'none';
+
+  resizeCanvas();
+  initStars();
+
+  currentQuestionIndex = 0;
+  score = 0;
+  shields = 100;
+  userAnswersLog = [];
+  bullets = [];
+  particles = [];
+
+  hudScore.textContent = `Score: ${score}`;
+  hudLives.textContent = `Shields: ${shields}%`;
+
+  player.x = canvas.width / 2 - player.w / 2;
+  player.y = canvas.height - player.h - 15;
+
+  spawnTargetsForCurrentQuestion();
+  gameActive = true;
+  requestAnimationFrame(gameLoop);
+}
+
+// Input Handlers
+window.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    fireLaser();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+
+// Mobile Controls
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnFire = document.getElementById('btn-fire');
+
+btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowLeft'] = true; });
+btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowLeft'] = false; });
+btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowRight'] = true; });
+btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowRight'] = false; });
+btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); fireLaser(); });
+
+btnLeft.addEventListener('mousedown', () => keys['ArrowLeft'] = true);
+btnLeft.addEventListener('mouseup', () => keys['ArrowLeft'] = false);
+btnRight.addEventListener('mousedown', () => keys['ArrowRight'] = true);
+btnRight.addEventListener('mouseup', () => keys['ArrowRight'] = false);
+btnFire.addEventListener('mousedown', fireLaser);
+
+// Canvas tap/click to shoot
+canvas.addEventListener('pointerdown', (e) => {
+  if (!gameActive) return;
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  // Move player toward tap position
+  player.x = Math.max(10, Math.min(canvas.width - player.w - 10, clickX - player.w / 2));
+  fireLaser();
+});
+
+// Audio Toggle
+audioToggle.addEventListener('click', () => {
+  sound.enabled = !sound.enabled;
+  audioToggle.textContent = `Sound: ${sound.enabled ? 'ON' : 'OFF'}`;
+});
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+
+// Initialize setup
+resizeCanvas();
+initStars();
+</script>
+
+</body>
+</html>
